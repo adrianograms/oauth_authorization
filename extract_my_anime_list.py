@@ -33,16 +33,16 @@ def get_token_myanimelist():
     #print("Access Token:", tokens['access_token'])
     #print("Refresh Token:", tokens['refresh_token'])
 
-def get_anime_info(anime_code, headers, params):
+def get_anime_info(anime_code, headers, params, file_path):
     url_base = f'https://api.myanimelist.net/v2/anime/{anime_code}'
 
     response = requests.get(url_base, headers=headers, params=params)
     result = response.json()
 
-
+    os.makedirs(file_path, exist_ok=True) 
     if (response.status_code == 200):
         try:
-            with open(f"data/raw/anime/{anime_code}_info.json", "w") as file:
+            with open(f"{file_path}/{anime_code}_info.json", "w") as file:
                 json.dump(result, file)
                 print(f'File {anime_code}_info.json created!')
         except IOError as e:
@@ -52,16 +52,18 @@ def get_anime_info(anime_code, headers, params):
     else:
         print(f'Anormal status {response.status_code}')
 
-def get_my_anime_list_page(url, headers, page, params={}):
+def get_my_anime_list_page(url, headers, page, user, file_path, params={}):
     response = requests.get(url, headers=headers, params=params)
     result = response.json()
 
     if response.status_code == 401:
         return url, page, response.status_code
     
+    full_path = file_path + user
+    os.makedirs(full_path, exist_ok=True) 
     if response.status_code == 200:
         try:
-            with open(f"data/raw/anime_list/my_list_{page}.json", "w") as file:
+            with open(f"{full_path}/my_list_{page}.json", "w") as file:
                 json.dump(result["data"], file)
                 print(f'File my_list_{page}.json created!')
         except IOError as e:
@@ -82,6 +84,7 @@ def get_anime_list(limit=1,user='@me'):
     next_url = f'https://api.myanimelist.net/v2/users/{user}/animelist'
     page = 0
     status_code = 200
+    file_path = 'data/raw/anime_list/'
     params = {
         "fields":"list_status",
         "limit": limit
@@ -92,7 +95,7 @@ def get_anime_list(limit=1,user='@me'):
     }
 
     while(next_url is not None):
-        next_url, page, status_code = get_my_anime_list_page(next_url,headers,page,params=params)
+        next_url, page, status_code = get_my_anime_list_page(next_url,headers,page,user,file_path,params=params)
 
         if status_code == 401:
             token = get_token_myanimelist()
@@ -124,10 +127,11 @@ def process_data(data):
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
+    file_path = 'data/raw/anime_info/'
     if isinstance(data, list):
         for d in data:
             anime_code = d['node']['id']
-            get_anime_info(anime_code,headers,params)
+            get_anime_info(anime_code,headers,params,file_path)
 
 def read_json_file(file_path):
     try:
@@ -141,13 +145,14 @@ def read_json_file(file_path):
 
 def get_list_info(folder_anime_list_pages,limit=1,user='@me'):
     get_anime_list(limit=limit, user=user)
-    files = get_json_files_from_folder(folder_anime_list_pages)
+    full_path = folder_anime_list_pages + '/' + user
+    files = get_json_files_from_folder(full_path)
     for file in files:
         read_json_file(file)
 
 
 limit = 100
-user = 'Maxine'
+user = 'woterim'
 folder_anime_list_pages = 'data/raw/anime_list'
 
 get_list_info(folder_anime_list_pages, limit=limit, user=user)
