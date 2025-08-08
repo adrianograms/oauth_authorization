@@ -3,7 +3,7 @@ from dotenv import load_dotenv, set_key
 import os
 import json
 
-# Teste commit
+# Teste commit 2
 def get_token_myanimelist():
     # Load environment variables from .env file
     load_dotenv()
